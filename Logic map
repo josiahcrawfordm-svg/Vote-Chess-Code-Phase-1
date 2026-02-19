@@ -1,0 +1,22 @@
+VoteChess/
+│
+├─ model/
+│   ├─ Player.java            // Stores player info, ratings, tokens
+│   ├─ ChessBoard.java        // Tracks board, pieces, captured, material
+│   ├─ MoveRecord.java        // Individual move storage
+│   ├─ GameHistory.java       // List of moves + utility methods
+│   └─ VoteManager.java       // Vote tallying and winning move
+│
+├─ logic/
+│   ├─ ChessRules.java        // Move legality, check/checkmate, special rules
+│   └─ GameEngine.java        // Executes moves, integrates voting with board
+│
+├─ gui/
+│   └─ VoteChessGUI.java      // Phase 8 Swing GUI + persistence
+│
+├─ network/
+│   ├─ VoteChessServer.java   // Phase 9 Server
+│   └─ VoteChessClient.java   // Phase 9 Client
+│
+└─ Main.java                  // Optional console entrypoint
+
