@@ -1,0 +1,22 @@
+package model;
+import java.io.Serializable;
+import java.util.*;
+
+public class VoteManager implements Serializable {
+    private Map<String,Integer> votes = new HashMap<>();
+
+    public void castVote(Player p, String move){
+        if(p.hasVoted || p.left) return;
+        votes.put(move,votes.getOrDefault(move,0)+p.tokens);
+        p.hasVoted=true;
+    }
+
+    public String getWinningMove(){
+        return votes.entrySet().stream().max(Map.Entry.comparingByValue()).map(Map.Entry::getKey).orElse(null);
+    }
+
+    public void resetVotes(Collection<Player> players){
+        votes.clear();
+        for(Player p:players) p.hasVoted=false;
+    }
+}
