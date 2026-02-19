@@ -1,0 +1,115 @@
+class ChessGame {
+    private char[][] board = new char[8][8];
+    public boolean whiteToMove = true;
+    public List<Character> capturedWhite = new ArrayList<>();
+    public List<Character> capturedBlack = new ArrayList<>();
+
+    // Track castling rights
+    private boolean whiteKingMoved=false, whiteRookAMoved=false, whiteRookHMoved=false;
+    private boolean blackKingMoved=false, blackRookAMoved=false, blackRookHMoved=false;
+
+    // Track last double pawn move for en passant
+    private int[] lastDoublePawnMove = null; // {row, col}
+
+    public boolean gameOver = false;
+    public String winner = null;
+
+    public ChessGame() { initializeBoard(); }
+
+    private void initializeBoard() {
+        String[] start = {
+            "rnbqkbnr","pppppppp","........","........",
+            "........","........","PPPPPPPP","RNBQKBNR"
+        };
+        for (int i = 0; i < 8; i++) board[i] = start[i].toCharArray();
+    }
+
+    public void printBoard() {
+        System.out.println();
+        System.out.println("Captured White: " + capturedWhite);
+        System.out.println("Captured Black: " + capturedBlack);
+        System.out.println("Material Score - White positive, Black negative: " + materialScore());
+        for (int i = 0; i < 8; i++) {
+            System.out.print(8 - i + " ");
+            for (int j = 0; j < 8; j++) System.out.print(board[i][j] + " ");
+            System.out.println();
+        }
+        System.out.println("  a b c d e f g h\n");
+        if(!gameOver) System.out.println((whiteToMove ? "White" : "Black") + " to move.");
+    }
+
+    public boolean makeMove(String moveInput) {
+        if(gameOver) return false;
+        // Simplified: move format e4, Ng5+, e1g1 (castling), etc.
+        // For pawns reaching 8th/1st rank, ask promotion
+        // For castling, check king/rook move history and attack squares
+        // For en passant, check lastDoublePawnMove
+
+        // Note: Full rules are very large; this is a framework for Phase 7.
+        // Move legality check must ensure no king in check after move.
+
+        // Execute move logic here (as in Phase 6)
+        // Update castling rights
+        // Update lastDoublePawnMove
+        // Update captured pieces
+        // Check for check or checkmate/stalemate
+        // Update whiteToMove
+
+        // After move:
+        if(kingInCheck(!whiteToMove) && !hasLegalMoves(!whiteToMove)) {
+            gameOver = true;
+            winner = whiteToMove ? "White" : "Black";
+            System.out.println("Checkmate! " + winner + " wins.");
+        } else if(!kingInCheck(!whiteToMove) && !hasLegalMoves(!whiteToMove)) {
+            gameOver = true;
+            winner = "Draw";
+            System.out.println("Stalemate! Game is drawn.");
+        }
+
+        return true;
+    }
+
+    private boolean hasLegalMoves(boolean white) {
+        // Scan all pieces of color 'white'
+        for(int r=0;r<8;r++) for(int c=0;c<8;c++){
+            char p = board[r][c];
+            if(p=='.') continue;
+            if(Character.isUpperCase(p)!=white) continue;
+            for(int tr=0;tr<8;tr++) for(int tc=0;tc<8;tc++){
+                if(isLegalMove(r,c,tr,tc)) {
+                    // Simulate move and check king safety
+                    char temp = board[tr][tc];
+                    board[tr][tc]=board[r][c]; board[r][c]='.';
+                    boolean inCheck = kingInCheck(white);
+                    board[r][c]=board[tr][tc]; board[tr][tc]=temp;
+                    if(!inCheck) return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    // Piece values
+    public int materialScore() { int score=0; for(char[] row:board) for(char p:row) score+=pieceValue(p); return score; }
+    private int pieceValue(char p){switch(Character.toLowerCase(p)){case 'p':return Character.isUpperCase(p)?1:-1; case 'n': case 'b': return Character.isUpperCase(p)?3:-3; case 'r': return Character.isUpperCase(p)?5:-5; case 'q': return Character.isUpperCase(p)?9:-9;} return 0;}
+
+    private boolean kingInCheck(boolean white){
+        int kr=-1,kc=-1;
+        for(int r=0;r<8;r++) for(int c=0;c<8;c++) if(board[r][c]==(white?'K':'k')){kr=r;kc=c;}
+        for(int r=0;r<8;r++) for(int c=0;c<8;c++){ char p=board[r][c]; if(p!='.' && Character.isUpperCase(p)!=white) if(isLegalMove(r,c,kr,kc)) return true;}
+        return false;
+    }
+
+    private boolean inBounds(int r,int c){return r>=0&&r<8&&c>=0&&c<8;}
+    private boolean pathClear(int fr,int fc,int tr,int tc){
+        int dr=Integer.compare(tr,fr), dc=Integer.compare(tc,fc);
+        int r=fr+dr, c=fc+dc;
+        while(r!=tr||c!=tc){ if(board[r][c]!='.') return false; r+=dr; c+=dc;}
+        return true;
+    }
+
+    private boolean isLegalMove(int fr,int fc,int tr,int tc){
+        // Existing move legality (Phase 6) plus castling, en passant, promotion checks here
+        return true; // placeholder for full logic
+    }
+}
