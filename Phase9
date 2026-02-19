@@ -1,0 +1,187 @@
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.*;
+import java.io.*;
+import java.util.*;
+
+// ---------------- Player ----------------
+class Player implements Serializable {
+    String username, team, title;
+    int bullet, blitz, rapid, daily, tokens;
+    boolean hasVoted = false;
+
+    public Player(String username, String team, int bullet, int blitz, int rapid, int daily, String title) {
+        this.username = username;
+        this.team = team;
+        this.bullet = bullet;
+        this.blitz = blitz;
+        this.rapid = rapid;
+        this.daily = daily;
+        this.title = title;
+        this.tokens = calculateTokens();
+    }
+
+    private int calculateTokens() {
+        if(title!=null && !title.isEmpty()) return 12;
+        int highest = Math.max(Math.max(bullet, blitz), Math.max(rapid, daily));
+        if(highest >= 2500) return 10;
+        if(highest >= 2300) return 9;
+        if(highest >= 2100) return 8;
+        if(highest >= 1900) return 7;
+        if(highest >= 1700) return 6;
+        if(highest >= 1500) return 5;
+        if(highest >= 1200) return 4;
+        if(highest >= 800) return 3;
+        return 2;
+    }
+}
+
+// ---------------- ChessBoard ----------------
+class ChessBoard implements Serializable {
+    char[][] board = new char[8][8];
+    boolean whiteToMove = true;
+    List<Character> capturedWhite = new ArrayList<>();
+    List<Character> capturedBlack = new ArrayList<>();
+
+    public ChessBoard() { initializeBoard(); }
+
+    private void initializeBoard() {
+        String[] start = {"rnbqkbnr","pppppppp","........","........","........","........","PPPPPPPP","RNBQKBNR"};
+        for(int i=0;i<8;i++) board[i] = start[i].toCharArray();
+    }
+
+    public String materialScore() {
+        int score=0;
+        for(char[] row: board) for(char p:row){
+            switch(Character.toLowerCase(p)){
+                case 'p': score+=Character.isUpperCase(p)?1:-1; break;
+                case 'n': case 'b': score+=Character.isUpperCase(p)?3:-3; break;
+                case 'r': score+=Character.isUpperCase(p)?5:-5; break;
+                case 'q': score+=Character.isUpperCase(p)?9:-9; break;
+            }
+        }
+        return String.valueOf(score);
+    }
+}
+
+// ---------------- VoteManager ----------------
+class VoteManager implements Serializable {
+    Map<String,Integer> votes = new HashMap<>();
+
+    public void castVote(Player p, String move){
+        if(p.hasVoted) return;
+        votes.put(move,votes.getOrDefault(move,0)+p.tokens);
+        p.hasVoted = true;
+    }
+
+    public String getWinningMove(){
+        return votes.entrySet().stream().max(Map.Entry.comparingByValue()).map(Map.Entry::getKey).orElse(null);
+    }
+
+    public void resetVotes(Collection<Player> players){
+        votes.clear();
+        for(Player p: players) p.hasVoted=false;
+    }
+}
+
+// ---------------- Phase 8 GUI ----------------
+public class PhaseEightGUI {
+    ChessBoard game = new ChessBoard();
+    VoteManager voteManager = new VoteManager();
+    List<Player> players = new ArrayList<>();
+    JTextArea boardArea = new JTextArea(10,20);
+    JTextArea capturedArea = new JTextArea(5,20);
+    JTextField moveField = new JTextField(5);
+    JComboBox<String> playerBox = new JComboBox<>();
+    JButton voteBtn = new JButton("Vote");
+    JButton saveBtn = new JButton("Save Game");
+    JButton loadBtn = new JButton("Load Game");
+
+    public PhaseEightGUI() {
+        JFrame frame = new JFrame("Vote Chess Phase 8");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setLayout(new BorderLayout());
+
+        JPanel topPanel = new JPanel();
+        topPanel.add(new JLabel("Select Player:"));
+        topPanel.add(playerBox);
+        topPanel.add(new JLabel("Move (e4, Ng5):"));
+        topPanel.add(moveField);
+        topPanel.add(voteBtn);
+        frame.add(topPanel, BorderLayout.NORTH);
+
+        JPanel centerPanel = new JPanel();
+        boardArea.setEditable(false);
+        capturedArea.setEditable(false);
+        centerPanel.add(new JScrollPane(boardArea));
+        centerPanel.add(new JScrollPane(capturedArea));
+        frame.add(centerPanel, BorderLayout.CENTER);
+
+        JPanel bottomPanel = new JPanel();
+        bottomPanel.add(saveBtn);
+        bottomPanel.add(loadBtn);
+        frame.add(bottomPanel, BorderLayout.SOUTH);
+
+        // Button actions
+        voteBtn.addActionListener(e -> {
+            Player p = players.get(playerBox.getSelectedIndex());
+            String move = moveField.getText();
+            voteManager.castVote(p, move);
+            updateBoardDisplay();
+        });
+
+        saveBtn.addActionListener(e -> saveGame());
+        loadBtn.addActionListener(e -> loadGame());
+
+        // Sample players for testing
+        players.add(new Player("Alice","white",2500,2400,2300,2200,"GM"));
+        players.add(new Player("Bob","black",1800,1700,1600,1500,null));
+        players.forEach(p -> playerBox.addItem(p.username));
+
+        updateBoardDisplay();
+
+        frame.pack();
+        frame.setVisible(true);
+    }
+
+    private void updateBoardDisplay() {
+        StringBuilder sb = new StringBuilder();
+        for(int i=0;i<8;i++){
+            sb.append(8-i).append(" ");
+            for(int j=0;j<8;j++) sb.append(game.board[i][j]).append(" ");
+            sb.append("\n");
+        }
+        sb.append("  a b c d e f g h\n");
+        sb.append("Material: ").append(game.materialScore()).append("\n");
+        boardArea.setText(sb.toString());
+
+        StringBuilder cap = new StringBuilder("Captured White: " + game.capturedWhite + "\n");
+        cap.append("Captured Black: " + game.capturedBlack + "\n");
+        capturedArea.setText(cap.toString());
+    }
+
+    private void saveGame() {
+        try(ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream("votechess_save.dat"))){
+            out.writeObject(players);
+            out.writeObject(game);
+            out.writeObject(voteManager);
+            JOptionPane.showMessageDialog(null,"Game saved!");
+        } catch(Exception e){e.printStackTrace();}
+    }
+
+    private void loadGame() {
+        try(ObjectInputStream in = new ObjectInputStream(new FileInputStream("votechess_save.dat"))){
+            players = (List<Player>)in.readObject();
+            game = (ChessBoard)in.readObject();
+            voteManager = (VoteManager)in.readObject();
+            playerBox.removeAllItems();
+            players.forEach(p -> playerBox.addItem(p.username));
+            updateBoardDisplay();
+            JOptionPane.showMessageDialog(null,"Game loaded!");
+        } catch(Exception e){e.printStackTrace();}
+    }
+
+    public static void main(String[] args){
+        SwingUtilities.invokeLater(PhaseEightGUI::new);
+    }
+}
