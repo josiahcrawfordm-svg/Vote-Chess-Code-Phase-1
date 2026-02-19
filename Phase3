@@ -1,0 +1,272 @@
+import java.util.*;
+import java.util.Scanner;
+
+Scanner sc = new Scanner(System.in);
+ChessGame game = new ChessGame();
+List<Player> players = new ArrayList<>();
+VoteManager voteManager = new VoteManager();
+
+// Step 1: Gather player info
+System.out.println("Enter number of players:");
+int n = Integer.parseInt(sc.nextLine());
+
+for (int i = 0; i < n; i++) {
+    System.out.println("Player " + (i+1) + " username:");
+    String username = sc.nextLine();
+    System.out.println("Team (white/black):");
+    String team = sc.nextLine();
+
+    System.out.println("Bullet rating:");
+    int bullet = Integer.parseInt(sc.nextLine());
+    System.out.println("Blitz rating:");
+    int blitz = Integer.parseInt(sc.nextLine());
+    System.out.println("Rapid rating:");
+    int rapid = Integer.parseInt(sc.nextLine());
+    System.out.println("Daily rating:");
+    int daily = Integer.parseInt(sc.nextLine());
+
+    System.out.println("Title (GM, IM, FM, CM) or leave blank:");
+    String title = sc.nextLine();
+    if (title.isEmpty()) title = null;
+
+    Player p = new Player(username, team, bullet, blitz, rapid, daily, title);
+    players.add(p);
+}
+
+class Player {
+    String username;
+    String team; // white/black
+    int bullet, blitz, rapid, daily;
+    String title;
+    int tokens;
+    boolean hasVoted = false;
+    boolean left = false;
+
+    public Player(String username, String team, int bullet, int blitz, int rapid, int daily, String title) {
+        this.username = username;
+        this.team = team;
+        this.bullet = bullet;
+        this.blitz = blitz;
+        this.rapid = rapid;
+        this.daily = daily;
+        this.title = title;
+        this.tokens = calculateTokens();
+    }
+
+    private int calculateTokens() {
+        if (title != null && !title.isEmpty()) return 12;
+
+        int highest = bullet;
+        if (blitz > highest) highest = blitz;
+        if (rapid > highest) highest = rapid;
+        if (daily > highest) highest = daily;
+
+        if (highest >= 2500) return 10;
+        if (highest >= 2300) return 9;
+        if (highest >= 2100) return 8;
+        if (highest >= 1900) return 7;
+        if (highest >= 1700) return 6;
+        if (highest >= 1500) return 5;
+        if (highest >= 1200) return 4;
+        if (highest >= 800) return 3;
+        return 2;
+    }
+}
+
+class ChessGame {
+    private char[][] board = new char[8][8];
+    private boolean whiteToMove = true;
+    private List<Character> capturedWhite = new ArrayList<>();
+    private List<Character> capturedBlack = new ArrayList<>();
+
+    public ChessGame() { initializeBoard(); }
+
+    private void initializeBoard() {
+        String[] start = {
+                "rnbqkbnr","pppppppp","........","........",
+                "........","........","PPPPPPPP","RNBQKBNR"};
+        for (int i = 0; i < 8; i++) board[i] = start[i].toCharArray();
+    }
+
+    public void printBoard() {
+        System.out.println();
+        System.out.println("Captured White: " + capturedWhite);
+        System.out.println("Captured Black: " + capturedBlack);
+        System.out.println("Material Score - White positive, Black negative: " + materialScore());
+        System.out.println();
+
+        for (int i = 0; i < 8; i++) {
+            System.out.print(8 - i + " ");
+            for (int j = 0; j < 8; j++) System.out.print(board[i][j] + " ");
+            System.out.println();
+        }
+        System.out.println("  a b c d e f g h\n");
+        System.out.println((whiteToMove ? "White" : "Black") + " to move.");
+    }
+
+    public boolean makeMove(String moveInput) {
+        if (moveInput.length() < 2) return false;
+
+        char pieceChar = 'P';
+        String target = moveInput;
+
+        if (moveInput.length() > 2) {
+            char first = moveInput.charAt(0);
+            if ("RNBQK".contains("" + first)) {
+                pieceChar = first;
+                target = moveInput.substring(1);
+            }
+        }
+
+        int toCol = target.charAt(0) - 'a';
+        int toRow = 8 - (target.charAt(1) - '0');
+
+        if (!inBounds(toRow, toCol)) return false;
+
+        int[] from = findPiece(pieceChar, toRow, toCol);
+        if (from == null) return false;
+
+        char movingPiece = board[from[0]][from[1]];
+        char targetPiece = board[toRow][toCol];
+
+        if (targetPiece != '.') {
+            if (Character.isUpperCase(targetPiece)) capturedWhite.add(targetPiece);
+            else capturedBlack.add(targetPiece);
+        }
+
+        board[toRow][toCol] = movingPiece;
+        board[from[0]][from[1]] = '.';
+
+        boolean check = kingInCheck(!whiteToMove);
+        whiteToMove = !whiteToMove;
+
+        System.out.println("Move executed: " + moveInput + (check ? "+" : ""));
+        if (check) System.out.println("Check!");
+
+        return true;
+    }
+
+    private int[] findPiece(char pieceChar, int tr, int tc) {
+        for (int r = 0; r < 8; r++)
+            for (int c = 0; c < 8; c++) {
+                char p = board[r][c];
+                if (p == '.') continue;
+                if (Character.toUpperCase(p) != pieceChar) continue;
+                if (Character.isUpperCase(p) != whiteToMove) continue;
+                if (isLegalMove(r, c, tr, tc)) return new int[]{r, c};
+            }
+        return null;
+    }
+
+    private boolean isLegalMove(int fr, int fc, int tr, int tc) {
+        char piece = board[fr][fc];
+        char target = board[tr][tc];
+        if (target != '.' && Character.isUpperCase(target) == Character.isUpperCase(piece)) return false;
+        int dr = tr - fr;
+        int dc = tc - fc;
+        switch (Character.toLowerCase(piece)) {
+            case 'p':
+                int dir = Character.isUpperCase(piece) ? -1 : 1;
+                if (dc == 0 && dr == dir && target == '.') return true;
+                if (Math.abs(dc) == 1 && dr == dir && target != '.') return true;
+                return false;
+            case 'r': return (dr == 0 || dc == 0) && pathClear(fr, fc, tr, tc);
+            case 'b': return Math.abs(dr) == Math.abs(dc) && pathClear(fr, fc, tr, tc);
+            case 'q': return ((dr == 0 || dc == 0) || Math.abs(dr) == Math.abs(dc)) && pathClear(fr, fc, tr, tc);
+            case 'n': return (Math.abs(dr) == 2 && Math.abs(dc) == 1) || (Math.abs(dr) == 1 && Math.abs(dc) == 2);
+            case 'k': return Math.abs(dr) <= 1 && Math.abs(dc) <= 1;
+        }
+        return false;
+    }
+
+    private boolean pathClear(int fr, int fc, int tr, int tc) {
+        int dr = Integer.compare(tr, fr);
+        int dc = Integer.compare(tc, fc);
+        int r = fr + dr, c = fc + dc;
+        while (r != tr || c != tc) { if (board[r][c] != '.') return false; r+=dr; c+=dc; }
+        return true;
+    }
+
+    private boolean kingInCheck(boolean white) {
+        int kr=-1, kc=-1;
+        for(int r=0;r<8;r++) for(int c=0;c<8;c++) if(board[r][c]==(white?'K':'k')) {kr=r; kc=c;}
+        for(int r=0;r<8;r++) for(int c=0;c<8;c++){ char p=board[r][c]; if(p!='.' && Character.isUpperCase(p)!=white) if(isLegalMove(r,c,kr,kc)) return true;}
+        return false;
+    }
+
+    private boolean inBounds(int r,int c){return r>=0&&r<8&&c>=0&&c<8;}
+
+    public int materialScore() {
+        int score=0;
+        for(char[] row:board) for(char p:row) score+=pieceValue(p);
+        return score;
+    }
+
+    private int pieceValue(char p){
+        switch(Character.toLowerCase(p)){
+            case 'p': return Character.isUpperCase(p)?1:-1;
+            case 'n': case 'b': return Character.isUpperCase(p)?3:-3;
+            case 'r': return Character.isUpperCase(p)?5:-5;
+            case 'q': return Character.isUpperCase(p)?9:-9;
+        }
+        return 0;
+    }
+}
+
+class VoteManager {
+    Map<String, Integer> votes = new HashMap<>();
+
+    public void castVote(Player player, String move) {
+        if (player.hasVoted) {
+            System.out.println(player.username + " already voted.");
+            return;
+        }
+        votes.put(move, votes.getOrDefault(move, 0) + player.tokens);
+        player.hasVoted = true;
+        System.out.println(player.username + " voted for " + move + " with " + player.tokens + " tokens.");
+    }
+
+    public String getWinningMove() {
+        return votes.entrySet().stream().max(Map.Entry.comparingByValue()).map(Map.Entry::getKey).orElse(null);
+    }
+
+    public void resetVotes(Collection<Player> players) {
+        votes.clear();
+        for (Player p:players) p.hasVoted=false;
+    }
+}
+
+public class PhaseThreeMain {
+    public static void main(String[] args){
+        Scanner sc = new Scanner(System.in);
+        ChessGame game = new ChessGame();
+        List<Player> players = new ArrayList<>();
+        VoteManager voteManager = new VoteManager();
+
+        // Example: Adding some players
+        players.add(new Player("Alice","white",2400,2300,2200,2100,null));
+        players.add(new Player("Bob","black",2500,2450,2400,2350,"GM"));
+
+        while(true){
+            game.printBoard();
+            System.out.println("\n--- Voting Phase ---");
+            for(Player p:players){
+                if(p.left) continue;
+                if(p.team.equals(game.whiteToMove?"white":"black")){
+                    System.out.println(p.username + ", enter move (e4, Ng5, etc.) or 'Leave':");
+                    String move = sc.nextLine();
+                    if(move.equalsIgnoreCase("Leave")) { p.left=true; continue; }
+                    voteManager.castVote(p, move);
+                }
+            }
+
+            String bestMove = voteManager.getWinningMove();
+            if(bestMove != null){
+                System.out.println("Winning move is: " + bestMove);
+                game.makeMove(bestMove);
+            } else System.out.println("No votes cast.");
+
+            voteManager.resetVotes(players);
+        }
+    }
+}
