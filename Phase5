@@ -1,0 +1,36 @@
+class MoveRecord {
+    String playerMove;     // e.g., e4, Ng5+
+    String winningPlayer;  // who voted for it (optional)
+    List<Character> capturedWhite;
+    List<Character> capturedBlack;
+    int materialScore;
+
+    public MoveRecord(String move, List<Character> capturedWhite, List<Character> capturedBlack, int materialScore) {
+        this.playerMove = move;
+        this.capturedWhite = new ArrayList<>(capturedWhite);
+        this.capturedBlack = new ArrayList<>(capturedBlack);
+        this.materialScore = materialScore;
+    }
+
+    @Override
+    public String toString() {
+        return playerMove + " | Captured W:" + capturedWhite + " B:" + capturedBlack + " | Material: " + materialScore;
+    }
+}
+
+class GameHistory {
+    List<MoveRecord> history = new ArrayList<>();
+
+    public void addMove(String move, ChessGame game) {
+        history.add(new MoveRecord(move, game.capturedWhite, game.capturedBlack, game.materialScore()));
+    }
+
+    public void printHistory() {
+        System.out.println("\n--- Move History ---");
+        int moveNumber = 1;
+        for(MoveRecord record: history){
+            System.out.println(moveNumber + ". " + record);
+            moveNumber++;
+        }
+    }
+}
