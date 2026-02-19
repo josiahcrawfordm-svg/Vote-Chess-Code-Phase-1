@@ -1,0 +1,15 @@
+package model;
+import java.io.Serializable;
+
+public class MoveRecord implements Serializable {
+    public String move;
+    public boolean isCheck;
+
+    public MoveRecord(String move, boolean isCheck){
+        this.move = move; this.isCheck = isCheck;
+    }
+
+    public String toString(){
+        return move + (isCheck?"+":"");
+    }
+}
