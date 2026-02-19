@@ -1,0 +1,72 @@
+import java.io.*;
+import java.net.*;
+import java.util.Scanner;
+
+public class VoteChessClient {
+    private String host = "localhost";
+    private int port = 5000;
+    private Socket socket;
+    private ObjectOutputStream out;
+    private ObjectInputStream in;
+    private Player player;
+    private Scanner sc = new Scanner(System.in);
+
+    public void start() throws IOException, ClassNotFoundException {
+        socket = new Socket(host, port);
+        out = new ObjectOutputStream(socket.getOutputStream());
+        in = new ObjectInputStream(socket.getInputStream());
+
+        // Setup player
+        System.out.println("Username: "); String username = sc.nextLine();
+        System.out.println("Team (white/black): "); String team = sc.nextLine();
+        System.out.println("Bullet rating: "); int bullet = Integer.parseInt(sc.nextLine());
+        System.out.println("Blitz rating: "); int blitz = Integer.parseInt(sc.nextLine());
+        System.out.println("Rapid rating: "); int rapid = Integer.parseInt(sc.nextLine());
+        System.out.println("Daily rating: "); int daily = Integer.parseInt(sc.nextLine());
+        System.out.println("Title (GM, IM, FM, CM) or leave blank: "); String title = sc.nextLine();
+        if(title.isEmpty()) title = null;
+
+        player = new Player(username, team, bullet, blitz, rapid, daily, title);
+        out.writeObject(player);
+        out.flush();
+
+        // Listen for game state updates in a separate thread
+        new Thread(() -> {
+            try {
+                while(true){
+                    ChessGame game = (ChessGame) in.readObject();
+                    GameHistory history = (GameHistory) in.readObject();
+                    displayGame(game, history);
+                }
+            } catch(Exception e){ e.printStackTrace(); }
+        }).start();
+
+        // Voting loop
+        while(true){
+            System.out.println("Enter move (e4, Ng5) or 'Leave': ");
+            String move = sc.nextLine();
+            out.writeObject(move);
+            out.flush();
+        }
+    }
+
+    private void displayGame(ChessGame game, GameHistory history){
+        System.out.println("\n--- Board ---");
+        for(int i=0;i<8;i++){
+            System.out.print(8-i + " ");
+            for(int j=0;j<8;j++) System.out.print(game.board[i][j]+" ");
+            System.out.println();
+        }
+        System.out.println("  a b c d e f g h");
+        System.out.println("Material: " + game.materialScore());
+        System.out.println("Captured White: " + game.capturedWhite);
+        System.out.println("Captured Black: " + game.capturedBlack);
+        System.out.println("--- Move History ---");
+        history.printHistory();
+        System.out.println((game.whiteToMove?"White":"Black") + " to move.");
+    }
+
+    public static void main(String[] args) throws IOException, ClassNotFoundException {
+        new VoteChessClient().start();
+    }
+}
