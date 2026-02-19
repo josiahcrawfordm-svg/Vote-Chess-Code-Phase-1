@@ -1,0 +1,15 @@
+package logic;
+import model.ChessBoard;
+
+public class GameEngine {
+    private ChessBoard board;
+
+    public GameEngine(ChessBoard board){ this.board = board; }
+
+    public boolean makeMove(String move){
+        if(!ChessRules.isMoveLegal(board, move)) return false;
+        // execute move, update captured pieces, castling rights, pawn promotion
+        board.whiteToMove = !board.whiteToMove;
+        return true;
+    }
+}
