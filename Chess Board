@@ -1,0 +1,38 @@
+package model;
+import java.io.Serializable;
+import java.util.*;
+
+public class ChessBoard implements Serializable {
+    public char[][] board = new char[8][8];
+    public boolean whiteToMove = true;
+    public List<Character> capturedWhite = new ArrayList<>();
+    public List<Character> capturedBlack = new ArrayList<>();
+
+    // Castling rights
+    public boolean whiteKingMoved=false, whiteRookAMoved=false, whiteRookHMoved=false;
+    public boolean blackKingMoved=false, blackRookAMoved=false, blackRookHMoved=false;
+    public int[] lastDoublePawnMove = null; // row,col
+
+    public boolean gameOver=false;
+    public String winner = null;
+
+    public ChessBoard(){ initializeBoard(); }
+
+    public void initializeBoard(){
+        String[] start = {"rnbqkbnr","pppppppp","........","........","........","........","PPPPPPPP","RNBQKBNR"};
+        for(int i=0;i<8;i++) board[i]=start[i].toCharArray();
+    }
+
+    public int materialScore(){
+        int score=0;
+        for(char[] row:board) for(char p:row){
+            switch(Character.toLowerCase(p)){
+                case 'p': score+=Character.isUpperCase(p)?1:-1; break;
+                case 'n': case 'b': score+=Character.isUpperCase(p)?3:-3; break;
+                case 'r': score+=Character.isUpperCase(p)?5:-5; break;
+                case 'q': score+=Character.isUpperCase(p)?9:-9; break;
+            }
+        }
+        return score;
+    }
+}
