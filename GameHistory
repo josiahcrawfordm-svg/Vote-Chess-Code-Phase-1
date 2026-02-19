@@ -1,0 +1,9 @@
+package model;
+import java.io.Serializable;
+import java.util.*;
+
+public class GameHistory implements Serializable {
+    private List<MoveRecord> moves = new ArrayList<>();
+    public void addMove(String move, boolean isCheck){ moves.add(new MoveRecord(move,isCheck)); }
+    public void printHistory(){ moves.forEach(m->System.out.print(m + " ")); System.out.println(); }
+}
