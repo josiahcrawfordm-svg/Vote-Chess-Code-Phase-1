@@ -201,6 +201,22 @@ class VoteManager {
         for(Player p:players) p.hasVoted=false;
     }
 }
+GameHistory gameHistory = new GameHistory();
+
+// Inside main loop, after winning move executed:
+if(bestMove!=null){
+    System.out.println("Winning move: "+bestMove);
+    game.makeMove(bestMove);
+    gameHistory.addMove(bestMove, game);
+}
+
+// At any point, you can print full history:
+System.out.println("Type 'History' to see full move log");
+if(sc.hasNextLine()){
+    String input = sc.nextLine();
+    if(input.equalsIgnoreCase("History")) gameHistory.printHistory();
+}
+
 
 public class PhaseFourMain {
     public static void main(String[] args) {
