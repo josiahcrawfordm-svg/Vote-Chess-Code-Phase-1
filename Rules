@@ -1,0 +1,19 @@
+package logic;
+import model.ChessBoard;
+
+public class ChessRules {
+
+    public static boolean isMoveLegal(ChessBoard board, String move){
+        // Implement Phases 6/7: move legality, king safety, castling, en passant, promotion
+        return true; // placeholder for full rules
+    }
+
+    public static boolean kingInCheck(ChessBoard board, boolean white){
+        // Scan for king under attack
+        return false;
+    }
+
+    public static boolean hasLegalMoves(ChessBoard board, boolean white){
+        return true;
+    }
+}
